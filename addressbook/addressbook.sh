@@ -13,9 +13,96 @@ get_all_entries()
 	echo "Name	Phone	  Email"
 	while IFS= read LINE
 	do
-		echo ${LINE} | sed 's/:/ | /g'
+		echo $LINE | sed 's/:/ | /g'
 	done < data.txt
 	echo
+}
+
+search_entrie()
+{
+	while IFS= read LINE
+	do
+		echo  $LINE | grep "$1" | sed 's/:/ | /g'
+	done < data.txt
+	echo
+}
+
+remove_when_one_entrie()
+{
+	search_entrie "$1"
+                while :
+                do
+                        echo "Are you sure?(y/n)"
+                        read CHOICE
+                        if [ "$CHOICE" = "y" ]
+                        then
+                                grep -v "$1" data.txt > temporary_file
+                                mv temporary_file data.txt
+                                if [ "$?" -eq "0" ]
+                                then
+                                        echo "Entrie has been removed..."
+                                else
+                                        echo "Error(couldn't remove entrie)"
+                                fi
+                                break
+                        elif [ "$CHOICE" = "n" ]
+                        then
+                                break
+                        fi
+                        echo
+                done
+}
+
+remove_when_more_entrie()
+{
+	while :
+        do
+		echo "Are you sure?(y/n)"
+                read CHOICE
+                if [ "$CHOICE" = "y" ]
+		then
+			INDEX=0
+			while IFS= read LINE
+			do
+				if [ "$INDEX" -eq "$1" ]
+				then
+					grep -v "$LINE" data.txt > temporary_file
+					mv temporary_file data.txt
+					if [ "$?" -eq "0" ]
+					then
+						echo "Entrie has been removed..."
+					else
+						echo "Error(couldn't remove entrie)"
+					fi
+					break
+				fi
+				INDEX=`expr $INDEX + 1`
+			done < data.txt
+			break
+		elif [ "$CHOICE" = "n" ]
+		then
+			break
+		fi
+		echo
+	done
+}
+
+remove_entrie()
+{
+	if [ `grep -r "$1" data.txt | wc -l` -eq "1" ]
+	then
+		remove_when_one_entrie "$1"
+	else
+		INDEX=0
+		while IFS= read LINE
+		do
+			echo "$INDEX " $LINE | grep "$1" | sed 's/:/ | /g'
+			INDEX=`expr $INDEX + 1`
+		done < data.txt
+		echo "Which entrie do you want to remove?(Number of entrie)"
+		read REMOVE_INDEX
+		remove_when_more_entrie "$REMOVE_INDEX"
+	fi
 }
 
 # Main
@@ -48,6 +135,18 @@ then
 				read EMAIL
 				echo
 				save_entrie "$NAME" "$PHONE" "$EMAIL"
+				;;
+			search)
+				echo "Search for..."
+				read SEARCH
+				echo
+				search_entrie $CHOICE $SEARCH
+				;;
+			remove)
+				echo "Remove..."
+				read REMOVE
+				echo
+				remove_entrie $REMOVE
 				;;
 			*)
 				echo "No option like $INPUT"
