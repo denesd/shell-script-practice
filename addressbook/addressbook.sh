@@ -1,6 +1,12 @@
 #!/bin/ash
 
 # Functions
+
+format_echo()
+{
+	echo "$1" | sed 's/:/ | /g'
+}
+
 save_entrie()
 {
 	echo "$1:$2:$3" >> data.txt
@@ -13,7 +19,7 @@ get_all_entries()
 	echo "Name	Phone	  Email"
 	while IFS= read LINE
 	do
-		echo $LINE | sed 's/:/ | /g'
+		format_echo "$LINE"
 	done < data.txt
 	echo
 }
@@ -22,9 +28,9 @@ search_entrie()
 {
 	while IFS= read LINE
 	do
-		echo  $LINE | grep "$1" | sed 's/:/ | /g'
+		RESULT=$(echo "$LINE" | grep "$1")
+		format_echo "$RESULT"
 	done < data.txt
-	echo
 }
 
 remove_when_one_entrie()
