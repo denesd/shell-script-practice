@@ -1,7 +1,6 @@
 #!/bin/ash
 
 # Functions
-
 format_echo()
 {
 	echo "$1" | sed 's/:/ | /g'
@@ -23,23 +22,14 @@ save_entrie()
 
 get_all_entries()
 {
-	INDEX=1
-	echo "Name	Phone	  Email"
-	while IFS= read LINE
-	do
-		echo "$INDEX " `format_echo "$LINE"`
-		INDEX=`expr $INDEX + 1`
-	done < data.txt
+	echo "Index	Name	Phone	  Email"
+	format_echo "`grep -n "$1" data.txt`"
 	echo
 }
 
 search_entrie()
 {
-	while IFS= read LINE
-	do
-		RESULT=`echo "$LINE" | grep "$1"`
-		format_echo "$RESULT"
-	done < data.txt
+	format_echo "`grep -n "$1" data.txt`"
 }
 
 remove_entrie()
@@ -82,7 +72,6 @@ remove_entrie()
                 fi
                 echo
 	done
-
 }
 
 edit_entrie()
@@ -93,44 +82,15 @@ edit_entrie()
 		read CHOICE
 		if [ "$CHOICE" = "y" ]
 		then
-			INDEX=1
-			while IFS= read LINE
-			do
-				if [ "$INDEX" -eq "$1" ]
-				then
-					if [ "$2" -eq "1" ]
-					then
-						NAME="$3"
-					else
-						NAME=`echo "$LINE" | cut -d ":" -f "1"`
-					fi
-					if [ "$2" -eq "2" ]
-					then
-						PHONE="$3"
-					else
-						PHONE=`echo "$LINE" | cut -d ":" -f "2"`
-					fi
-					if [ "$2" -eq "3" ]
-					then
-						EMAIL="$3"
-					else
-						EMAIL=`echo "$LINE" | cut -d ":" -f "3"`
-					fi
-
-					save_entrie "$NAME" "$PHONE" "$EMAIL"
-					if [ "$?" -eq "0" ]
-					then
-						remove_entrie "$1" "y"
-						echo "Entrie has been edited..."
-						echo
-					else
-						echo "Error(couldn't save entrie)"
-						echo
-					fi
-					break
-				fi
-				INDEX=`expr $INDEX + 1`
-			done < data.txt
+			sed -i "${1}s/`head -n $1 data.txt | tail -n 1 | cut -d : -f $2`/${3}/" data.txt
+			if [ "$?" -eq "0" ]
+			then
+				echo "Entrie has been edited..."
+				echo
+			else
+				echo "Error(couldn't edit entrie)"
+				echo
+			fi
 			break
 		elif [ "$CHOICE" = "n" ]
 		then
