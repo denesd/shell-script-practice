@@ -6,6 +6,25 @@ format_echo()
 	echo "$1" | sed 's/:/ | /g'
 }
 
+usage()
+{
+	echo "usage: addressbook [OPTIONS]"
+	echo
+	echo "OPTIONS"
+	echo "	-h"
+	echo "		Display usage"
+	echo "	-a"
+	echo "		Display all entries."
+	echo "	-s NAME PHONE EMAIL"
+	echo "		Save entrie with name, phone naumber and email address."
+	echo "	-f SEARCH"
+	echo "		Find entrie/entries by the given input."
+	echo "	-e INDEX FIELD_INDEX CHANGE"
+	echo "		Replace entrie's field with CHANGE"
+	echo "	-r INDEX"
+	echo "		Removes entrie by the given INDEX"
+}
+
 save_entrie()
 {
 	if  grep -q "${1}:${2}:${3}" data.txt
@@ -102,7 +121,7 @@ edit_entrie()
 
 edit_entrie_menu()
 {
-	EDIT_INDEX=
+	unset EDIT_INDEX
 	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
 	then
 		format_echo `grep "$1" data.txt`
@@ -115,7 +134,7 @@ edit_entrie_menu()
 			read EDIT_INDEX
 		done
 	fi
-	EDIT_FIELD=
+	unset EDIT_FIELD
 	while [ -z "$EDIT_FIELD" ]
 	do
 		echo "Which field do you want to edit?(Number of option)"
@@ -124,7 +143,7 @@ edit_entrie_menu()
 		echo "3 Email address"
 		read EDIT_FIELD
 	done
-	CHANGE=
+	unset CHANGE
 	while [ -z "$CHANGE" ]
 	do
 		echo "Type in your change..."
@@ -135,7 +154,7 @@ edit_entrie_menu()
 
 remove_entrie_menu()
 {
-	REMOVE_INDEX=
+	unset REMOVE_INDEX
 	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
 	then
 		format_echo `grep "$1" data.txt`
@@ -186,7 +205,7 @@ then
 				echo "Search for entrie..."
 				read SEARCH
 				echo
-				search_entrie $CHOICE $SEARCH
+				search_entrie $SEARCH
 				;;
 			remove)
 				echo "Search for entrie to remove..."
@@ -203,6 +222,33 @@ then
 				echo "No option like $INPUT"
 				echo
 				;;
+		esac
+	done
+else
+	while getopts 'a:r:e:s:f:h' c
+	do
+		case $c in
+			h)
+				usage
+				;;
+			a)
+				get_all_entries
+				;;
+			s)
+				save_entrie "$2" "$3" "$4"
+				;;
+			f)
+				search_entrie "$2"
+				;;
+			e)
+				edit_entrie "$2" "$3" "$4"
+				;;
+			r)
+				remove_entrie "$2"
+				;;
+			*)
+				usage
+				exit 1
 		esac
 	done
 fi
