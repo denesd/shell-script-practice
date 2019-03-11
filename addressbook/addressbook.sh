@@ -171,7 +171,7 @@ remove_entrie_menu()
 }
 
 # Main
-if [ -z "$@" ]
+if [ "$#" -eq "0" ]
 then
 	while :
 	do
@@ -225,7 +225,7 @@ then
 		esac
 	done
 else
-	while getopts 'a:r:e:s:f:h' c
+	while getopts 'af:r:e:s:h' c
 	do
 		case $c in
 			h)
@@ -235,13 +235,25 @@ else
 				get_all_entries
 				;;
 			s)
-				save_entrie "$2" "$3" "$4"
+				if [ "$#" -eq "4" ]
+				then
+					save_entrie "$2" "$3" "$4"
+				else
+					echo "Error: need 3 argument"
+					exit 1
+				fi
 				;;
 			f)
 				search_entrie "$2"
 				;;
 			e)
-				edit_entrie "$2" "$3" "$4"
+				if [ "$#" -eq "4" ]
+				then
+					edit_entrie "$2" "$3" "$4"
+				else
+					echo "Error: need 3 argument"
+					exit 1
+				fi
 				;;
 			r)
 				remove_entrie "$2"
@@ -251,4 +263,5 @@ else
 				exit 1
 		esac
 	done
+	shift $((OPTIND -1))
 fi
