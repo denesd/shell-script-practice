@@ -140,51 +140,55 @@ edit_entrie()
 	done
 }
 
-remove_or_edit_entrie()
+edit_entrie_menu()
 {
-	if [ "$2" = "edit" ]
+	EDIT_INDEX=
+	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
 	then
-		INDEX=1
-                while IFS= read LINE
-                do
-                        echo "$INDEX " $LINE | grep "$1" | sed 's/:/ | /g'
-			if [ "$?" -eq "0" ]
-			then
-				EDIT_INDEX=$INDEX
-			fi
-                        INDEX=`expr $INDEX + 1`
-                done < data.txt
-                if [ `grep -r "$1" data.txt | wc -l` -gt "1" ]
-		then
-			echo "Which entrie do you want to edit?(Number of entrie)"
-                        read EDIT_INDEX
-                fi
-		echo "Which field do you want to edit?(Number of option)"
-	        echo "1 Name"
-	        echo "2 Phone number"
-	        echo "3 Email address"
-        	read EDIT_FIELD
-        	echo "Type in your change..."
-	        read CHANGE
-		edit_entrie "$EDIT_INDEX" "$EDIT_FIELD" "$CHANGE"
+		format_echo `grep "$1" data.txt`
+		EDIT_INDEX=`grep -n "$1" data.txt | cut -d : -f 1`
 	else
-		INDEX=1
-		while IFS= read LINE
+		while [ -z "$EDIT_INDEX" ]
 		do
-			echo "$INDEX " $LINE | grep "$1" | sed 's/:/ | /g'
-			if [ "$?" -eq "0" ]
-                        then
-                                REMOVE_INDEX=$INDEX
-                        fi
-			INDEX=`expr $INDEX + 1`
-		done < data.txt
-		if [ `grep -r "$1" data.txt | wc -l` -gt "1" ]
-		then
+			format_echo "`grep -n "$1" data.txt`"
+			echo "Which entrie do you want to edit?(Number of entrie)"
+			read EDIT_INDEX
+		done
+	fi
+	EDIT_FIELD=
+	while [ -z "$EDIT_FIELD" ]
+	do
+		echo "Which field do you want to edit?(Number of option)"
+		echo "1 Name"
+		echo "2 Phone number"
+		echo "3 Email address"
+		read EDIT_FIELD
+	done
+	CHANGE=
+	while [ -z "$CHANGE" ]
+	do
+		echo "Type in your change..."
+		read CHANGE
+	done
+	edit_entrie "$EDIT_INDEX" "$EDIT_FIELD" "$CHANGE"
+}
+
+remove_entrie_menu()
+{
+	REMOVE_INDEX=
+	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
+	then
+		format_echo `grep "$1" data.txt`
+		REMOVE_INDEX=`grep -n "$1" data.txt | cut -d : -f 1`
+	else
+		while [ -z "$REMOVE_INDEX" ]
+		do
+			format_echo "`grep -n "$1" data.txt`"
 			echo "Which entrie do you want to remove?(Number of entrie)"
 			read REMOVE_INDEX
-		fi
-		remove_entrie "$REMOVE_INDEX"
+		done
 	fi
+	remove_entrie "$REMOVE_INDEX"
 }
 
 # Main
@@ -228,12 +232,12 @@ then
 				echo "Search for entrie to remove..."
 				read REMOVE
 				echo
-				remove_or_edit_entrie $REMOVE "remove"
+				remove_entrie_menu $REMOVE
 				;;
 			edit)
 				echo "Search for entrie to edit..."
 				read EDIT
-				remove_or_edit_entrie $EDIT "edit"
+				edit_entrie_menu $EDIT
 				;;
 			*)
 				echo "No option like $INPUT"
