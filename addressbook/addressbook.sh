@@ -1,6 +1,17 @@
-#!/bin/ash
+#!/usr/bin/env sh
+
+set -eu
 
 # Functions
+DATABASE="data.txt"
+
+init_db()
+{
+	if [ ! -f "$DATABASE" ]; then
+		touch "$DATABASE"
+	fi
+}
+
 format_echo()
 {
 	echo "$1" | sed 's/:/ | /g'
@@ -16,172 +27,186 @@ usage()
 	echo "	-a"
 	echo "		Display all entries."
 	echo "	-s NAME PHONE EMAIL"
-	echo "		Save entrie with name, phone naumber and email address."
+	echo "		Save entry with name, phone number and email address."
 	echo "	-f SEARCH"
-	echo "		Find entrie/entries by the given input."
+	echo "		Find entry/entries by the given input."
 	echo "	-e INDEX FIELD_INDEX CHANGE"
-	echo "		Replace entrie's field with CHANGE"
+	echo "		Replace entry's field with CHANGE"
 	echo "	-r INDEX"
-	echo "		Removes entrie by the given INDEX"
+	echo "		Removes entry by the given INDEX"
 }
 
-save_entrie()
+save_entry()
 {
-	if  grep -q "${1}:${2}:${3}" data.txt
-	then
-		echo "Entrie already exists..."
+
+	NAME="$1"
+	PHONE="$2"
+	EMAIL="$3"
+	if [ -z "$NAME" ] || [ -z "$PHONE" ] || [ -z "$EMAIL" ]; then
+		echo "None of the fields can be empty..."
 		echo
 	else
-		echo "$1:$2:$3" >> data.txt
-                echo Entrie has been saved...
-                echo
-
+		if  grep -q "$NAME:$PHONE:$EMAIL" "$DATABASE"; then
+			echo "Entry already exists..."
+			echo
+		else
+			echo "$NAME:$PHONE:$EMAIL" >> "$DATABASE"
+               		echo Entry has been saved...
+                	echo
+		fi
 	fi
 }
 
 get_all_entries()
 {
 	echo "Index	Name	Phone	  Email"
-	format_echo "`grep -n "$1" data.txt`"
+	format_echo "`cat -n  $DATABASE`"
 	echo
 }
 
-search_entrie()
+search_entry()
 {
-	format_echo "`grep -n "$1" data.txt`"
+	if [ -z "$@" ]; then
+		get_all_entries
+	else
+		format_echo "`grep -n "$1" $DATABASE`"
+		echo
+	fi
 }
 
-remove_entrie()
+remove_entry()
 {
-	while :
-	do
-		if [ "$2" != "y" ]
-		then
+	local ENTRY_INDEX=$1
+	if [ "$#" -ne "2" ]; then
+		local FORCE=""
+	else
+		local FORCE="$2"
+	fi
+	while :; do
+		if [ "$FORCE" != "y" ]; then
 			echo "Are you sure?(y/n)"
 			read CHOICE
 		fi
-		if [ "$CHOICE" = "y" ]
-		then
+		if [ "$CHOICE" = "y" ]; then
 			INDEX=1
-        		while IFS= read LINE
-        		do
-				if [ "$INDEX" = "$1" ]
-				then
-                             		grep -v "$LINE" data.txt > temporary_file
-                               		mv temporary_file data.txt
-                               		if [ "$?" -eq "0" ]
-                               		then
-                                       		if [ "$2" != "y" ]
-						then
-							echo "Entrie has been removed..."
+			while IFS= read LINE; do
+				if [ "$INDEX" = "$ENTRY_INDEX" ]; then
+					grep -v "$LINE" "$DATABASE" > temporary_file
+					mv temporary_file "$DATABASE"
+					if [ "$?" -eq "0" ]; then
+						if [ "$FORCE" != "y" ]; then
+							echo "Entry has been removed..."
 							echo
 						fi
-                               		else
-                                       		echo "Error(couldn't remove entrie)"
+					else
+						echo "Error( couldn't remove entry )"
 						echo
-                               		fi
+					fi
 					break
 				fi
 				INDEX=`expr $INDEX + 1`
-	        	done < data.txt
+			done < "$DATABASE"
 			break
-		elif [ "$CHOICE" = "n" ]
-                then
-                	break
-                fi
-                echo
-	done
-}
-
-edit_entrie()
-{
-	while :
-	do
-		echo "Are you sure?(y/n)"
-		read CHOICE
-		if [ "$CHOICE" = "y" ]
-		then
-			sed -i "${1}s/`head -n $1 data.txt | tail -n 1 | cut -d : -f $2`/${3}/" data.txt
-			if [ "$?" -eq "0" ]
-			then
-				echo "Entrie has been edited..."
-				echo
-			else
-				echo "Error(couldn't edit entrie)"
-				echo
-			fi
-			break
-		elif [ "$CHOICE" = "n" ]
-		then
+		elif [ "$CHOICE" = "n" ]; then
 			break
 		fi
 		echo
 	done
 }
 
-edit_entrie_menu()
+edit_entry()
 {
-	unset EDIT_INDEX
-	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
-	then
-		format_echo `grep "$1" data.txt`
-		EDIT_INDEX=`grep -n "$1" data.txt | cut -d : -f 1`
+	ENTRY_INDEX=$1
+	EDIT_FIELD=$2
+	CHANGE="$3"
+	while :; do
+		echo "Are you sure?(y/n)"
+		read CHOICE
+		if [ "$CHOICE" = "y" ]; then
+			sed -i "${ENTRY_INDEX}s/`head -n $ENTRY_INDEX $DATABASE \
+				| tail -n 1 \
+				| cut -d : -f $EDIT_FIELD`/$CHANGE/" "$DATABASE"
+			if [ "$?" -eq "0" ]; then
+				echo "Entry has been edited..."
+				echo
+			else
+				echo "Error( couldn't edit entry )"
+				echo
+			fi
+			break
+		elif [ "$CHOICE" = "n" ]; then
+			break
+		fi
+		echo
+	done
+}
+
+edit_entry_menu()
+{
+	if [ -z "$@" ]; then
+		SEARCH=""
 	else
-		while [ -z "$EDIT_INDEX" ]
-		do
-			format_echo "`grep -n "$1" data.txt`"
-			echo "Which entrie do you want to edit?(Number of entrie)"
-			read EDIT_INDEX
+		SEARCH="$1"
+	fi
+	local ENTRY_INDEX=
+	if [ `grep "$SEARCH" $DATABASE | wc -l` -eq "1" ]; then
+		format_echo `grep "$SEARCH" $DATABASE`
+		ENTRY_INDEX=`grep -n "$SEARCH" $DATABASE | cut -d : -f 1`
+	else
+		while [ -z "$ENTRY_INDEX" ]; do
+			format_echo "`grep -n "$SEARCH" $DATABASE`"
+			echo "Which entry do you want to edit?( Index of entry )"
+			read ENTRY_INDEX
 		done
 	fi
-	unset EDIT_FIELD
-	while [ -z "$EDIT_FIELD" ]
-	do
-		echo "Which field do you want to edit?(Number of option)"
+	local FIELD_INDEX=
+	while [ -z "$FIELD_INDEX" ]; do
+		echo "Which field do you want to edit?( Index of option )"
 		echo "1 Name"
 		echo "2 Phone number"
 		echo "3 Email address"
-		read EDIT_FIELD
+		read FIELD_INDEX
 	done
-	unset CHANGE
-	while [ -z "$CHANGE" ]
-	do
+	local CHANGE=
+	while [ -z "$CHANGE" ]; do
 		echo "Type in your change..."
 		read CHANGE
 	done
-	edit_entrie "$EDIT_INDEX" "$EDIT_FIELD" "$CHANGE"
+	edit_entry "$ENTRY_INDEX" "$FIELD_INDEX" "$CHANGE"
 }
 
-remove_entrie_menu()
+remove_entry_menu()
 {
-	unset REMOVE_INDEX
-	if [ `grep "$1" data.txt | wc -l` -eq "1" ]
-	then
-		format_echo `grep "$1" data.txt`
-		REMOVE_INDEX=`grep -n "$1" data.txt | cut -d : -f 1`
+	if [ -z "$@" ]; then
+		SEARCH=""
 	else
-		while [ -z "$REMOVE_INDEX" ]
-		do
-			format_echo "`grep -n "$1" data.txt`"
-			echo "Which entrie do you want to remove?(Number of entrie)"
-			read REMOVE_INDEX
+		SEARCH="$1"
+	fi
+	local ENTRY_INDEX=
+	if [ `grep "$SEARCH" $DATABASE | wc -l` -eq "1" ]; then
+		format_echo `grep "$1" $DATABASE`
+		ENTRY_INDEX=`grep -n "$1" $DATABASE | cut -d : -f 1`
+	else
+		while [ -z "$ENTRY_INDEX" ]; do
+			format_echo "`grep -n "$SEARCH" $DATABASE`"
+			echo "Which entry do you want to remove?( Index of entry )"
+			read ENTRY_INDEX
 		done
 	fi
-	remove_entrie "$REMOVE_INDEX"
+	remove_entry "$ENTRY_INDEX"
 }
 
 # Main
-if [ "$#" -eq "0" ]
-then
-	while :
-	do
+init_db
+if [ "$#" -eq "0" ]; then
+	while :; do
 		# Menu
 		echo "Addressbook"
 		echo "Type 'all' to display all entires"
-		echo "Type 'add' to add entire"
+		echo "Type 'add' to add entry"
 		echo "Type 'search' to search entires"
-		echo "Type 'edit' to edit an existing entrie"
-		echo "Type 'remove' to remove an entire"
+		echo "Type 'edit' to edit an existing entry"
+		echo "Type 'remove' to remove an entry"
 		echo "(^C to quit)"
 		read INPUT
 		echo
@@ -199,24 +224,24 @@ then
 				echo "Please enter your email address:"
 				read EMAIL
 				echo
-				save_entrie "$NAME" "$PHONE" "$EMAIL"
+				save_entry "$NAME" "$PHONE" "$EMAIL"
 				;;
 			search)
-				echo "Search for entrie..."
+				echo "Search for entry..."
 				read SEARCH
 				echo
-				search_entrie $SEARCH
+				search_entry $SEARCH
 				;;
 			remove)
-				echo "Search for entrie to remove..."
+				echo "Search for entry to remove..."
 				read REMOVE
 				echo
-				remove_entrie_menu $REMOVE
+				remove_entry_menu $REMOVE
 				;;
 			edit)
-				echo "Search for entrie to edit..."
+				echo "Search for entry to edit..."
 				read EDIT
-				edit_entrie_menu $EDIT
+				edit_entry_menu $EDIT
 				;;
 			*)
 				echo "No option like $INPUT"
@@ -225,8 +250,7 @@ then
 		esac
 	done
 else
-	while getopts 'af:r:e:s:h' c
-	do
+	while getopts 'af:r:e:s:h' c; do
 		case $c in
 			h)
 				usage
@@ -237,26 +261,26 @@ else
 			s)
 				if [ "$#" -eq "4" ]
 				then
-					save_entrie "$2" "$3" "$4"
+					save_entry "$2" "$3" "$4"
 				else
 					echo "Error: need 3 argument"
 					exit 1
 				fi
 				;;
 			f)
-				search_entrie "$2"
+				search_entry "$2"
 				;;
 			e)
 				if [ "$#" -eq "4" ]
 				then
-					edit_entrie "$2" "$3" "$4"
+					edit_entry "$2" "$3" "$4"
 				else
 					echo "Error: need 3 argument"
 					exit 1
 				fi
 				;;
 			r)
-				remove_entrie "$2"
+				remove_entry "$2"
 				;;
 			*)
 				usage
